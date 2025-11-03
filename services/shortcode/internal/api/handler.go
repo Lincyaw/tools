@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -98,11 +99,15 @@ func (h *Handler) RedirectToOriginal(c *gin.Context) {
 	}
 
 	// Asynchronously record click
+	// Use context.Background() to avoid context cancellation after redirect
 	go func() {
 		ipAddress := c.ClientIP()
 		userAgent := c.GetHeader("User-Agent")
 		referer := c.GetHeader("Referer")
-		_ = h.service.RecordClick(c.Request.Context(), code, ipAddress, userAgent, referer)
+		// Create a new context with timeout to avoid goroutine leak
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = h.service.RecordClick(ctx, code, ipAddress, userAgent, referer)
 	}()
 
 	c.Redirect(http.StatusMovedPermanently, originalURL)
@@ -190,4 +195,37 @@ func (h *Handler) DeleteShortCode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Short code deleted successfully",
 	})
+}
+
+// GetDetailedStats get detailed statistics with hourly buckets
+// @Summary Get detailed statistics
+// @Description Get detailed statistics including hourly access data and location information
+// @Tags shortcode
+// @Produce json
+// @Param code path string true "Short code"
+// @Param hours query int false "Number of hours to look back (default: all time)"
+// @Success 200 {object} model.DetailedStats
+// @Failure 404 {object} ErrorResponse
+// @Router /api/v1/stats/{code}/detailed [get]
+func (h *Handler) GetDetailedStats(c *gin.Context) {
+	code := c.Param("code")
+
+	// Get hours parameter (default to 0 = all time)
+	hours := 0
+	if hoursParam := c.Query("hours"); hoursParam != "" {
+		if h, err := time.ParseDuration(hoursParam + "h"); err == nil {
+			hours = int(h.Hours())
+		}
+	}
+
+	stats, err := h.service.GetDetailedStats(c.Request.Context(), code, hours)
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{
+			Error:   "not_found",
+			Message: "Short code not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

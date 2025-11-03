@@ -3,9 +3,12 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"net/url"
 	"regexp"
 	"time"
@@ -39,6 +42,7 @@ type ShortCodeService interface {
 	RecordClick(ctx context.Context, code, ipAddress, userAgent, referer string) error
 	DeleteShortCode(ctx context.Context, code string) error
 	GetMetrics(ctx context.Context) (map[string]interface{}, error)
+	GetDetailedStats(ctx context.Context, code string, hours int) (*model.DetailedStats, error)
 }
 
 type shortCodeService struct {
@@ -156,6 +160,24 @@ func (s *shortCodeService) RecordClick(ctx context.Context, code, ipAddress, use
 		return fmt.Errorf("failed to log click: %w", err)
 	}
 
+	// Get IP location information
+	location := s.getIPLocation(ipAddress)
+
+	// Record access statistics with hourly bucket
+	hourBucket := time.Now().Truncate(time.Hour)
+	stats := &model.AccessStatistics{
+		ShortCodeID: shortCode.ID,
+		IPAddress:   ipAddress,
+		Country:     location.Country,
+		Region:      location.Region,
+		City:        location.City,
+		HourBucket:  hourBucket,
+	}
+
+	if err := s.repo.RecordAccessStats(ctx, stats); err != nil {
+		return fmt.Errorf("failed to record access stats: %w", err)
+	}
+
 	return nil
 }
 
@@ -214,4 +236,103 @@ func isValidCode(code string) bool {
 	// Code can only contain letters and numbers, length between 4-50
 	re := regexp.MustCompile(`^[a-zA-Z0-9]{4,50}$`)
 	return re.MatchString(code)
+}
+
+// GetDetailedStats gets detailed statistics
+func (s *shortCodeService) GetDetailedStats(ctx context.Context, code string, hours int) (*model.DetailedStats, error) {
+	stats, err := s.repo.GetDetailedStats(ctx, code, hours)
+	if err != nil {
+		return nil, ErrCodeNotFound
+	}
+	return stats, nil
+}
+
+// getIPLocation gets IP location information
+func (s *shortCodeService) getIPLocation(ipAddress string) model.IPLocation {
+	// Default location
+	location := model.IPLocation{
+		Country: "Unknown",
+		Region:  "Unknown",
+		City:    "Unknown",
+	}
+
+	// Skip for local/private IPs
+	if isPrivateIP(ipAddress) {
+		location.Country = "Private"
+		location.Region = "Local"
+		location.City = "Local"
+		return location
+	}
+
+	// Use ip-api.com free API (limited to 45 requests per minute)
+	// In production, consider using a paid service or caching
+	apiURL := fmt.Sprintf("http://ip-api.com/json/%s?fields=status,country,regionName,city", ipAddress)
+
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return location
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return location
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return location
+	}
+
+	var result struct {
+		Status     string `json:"status"`
+		Country    string `json:"country"`
+		RegionName string `json:"regionName"`
+		City       string `json:"city"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return location
+	}
+
+	if result.Status == "success" {
+		if result.Country != "" {
+			location.Country = result.Country
+		}
+		if result.RegionName != "" {
+			location.Region = result.RegionName
+		}
+		if result.City != "" {
+			location.City = result.City
+		}
+	}
+
+	return location
+}
+
+// isPrivateIP checks if IP is private/local
+func isPrivateIP(ip string) bool {
+	// Simple check for common private IP ranges and localhost
+	if ip == "" || ip == "::1" || ip == "localhost" {
+		return true
+	}
+
+	// Check for private IPv4 ranges
+	privateRanges := []string{
+		"10.", "172.16.", "172.17.", "172.18.", "172.19.",
+		"172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
+		"172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
+		"172.30.", "172.31.", "192.168.", "127.",
+	}
+
+	for _, prefix := range privateRanges {
+		if len(ip) >= len(prefix) && ip[:len(prefix)] == prefix {
+			return true
+		}
+	}
+
+	return false
 }

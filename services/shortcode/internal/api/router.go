@@ -32,8 +32,9 @@ func NewRouter(service service.ShortCodeService) *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/shorten", handler.CreateShortCode)
+		v1.GET("/stats/:code/detailed", handler.GetDetailedStats) // Detailed stats must be before :code
 		v1.GET("/stats/:code", handler.GetStats)
-		v1.DELETE("/shorten/:code", handler.DeleteShortCode) // New delete functionality
+		v1.DELETE("/shorten/:code", handler.DeleteShortCode)
 	}
 
 	// Health check

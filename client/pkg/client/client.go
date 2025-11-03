@@ -52,6 +52,44 @@ type ShortCodeStats struct {
 	LastAccessedAt *time.Time `json:"last_accessed_at,omitempty"`
 }
 
+// DetailedStats detailed statistics response
+type DetailedStats struct {
+	Code           string             `json:"code"`
+	OriginalURL    string             `json:"original_url"`
+	TotalClicks    int64              `json:"total_clicks"`
+	UniqueIPs      int64              `json:"unique_ips"`
+	CreatedAt      time.Time          `json:"created_at"`
+	LastAccessedAt *time.Time         `json:"last_accessed_at,omitempty"`
+	HourlyStats    []HourlyStatItem   `json:"hourly_stats"`
+	LocationStats  []LocationStatItem `json:"location_stats"`
+	RecentAccesses []RecentAccessItem `json:"recent_accesses"`
+}
+
+// HourlyStatItem hourly statistics item
+type HourlyStatItem struct {
+	HourBucket  time.Time `json:"hour_bucket"`
+	AccessCount int64     `json:"access_count"`
+	UniqueIPs   int64     `json:"unique_ips"`
+}
+
+// LocationStatItem location statistics item
+type LocationStatItem struct {
+	Country     string `json:"country"`
+	Region      string `json:"region"`
+	City        string `json:"city"`
+	AccessCount int64  `json:"access_count"`
+}
+
+// RecentAccessItem recent access item
+type RecentAccessItem struct {
+	IPAddress  string    `json:"ip_address"`
+	Country    string    `json:"country"`
+	Region     string    `json:"region"`
+	City       string    `json:"city"`
+	AccessTime time.Time `json:"access_time"`
+	UserAgent  string    `json:"user_agent"`
+}
+
 // ErrorResponse error response
 type ErrorResponse struct {
 	Error   string `json:"error"`
@@ -125,6 +163,40 @@ func (c *Client) GetStats(code string) (*ShortCodeStats, error) {
 	}
 
 	var stats ShortCodeStats
+	if err := json.Unmarshal(body, &stats); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return &stats, nil
+}
+
+// GetDetailedStats get detailed short link statistics
+func (c *Client) GetDetailedStats(code string, hours int) (*DetailedStats, error) {
+	url := fmt.Sprintf("%s/api/v1/stats/%s/detailed", c.BaseURL, code)
+	if hours > 0 {
+		url = fmt.Sprintf("%s?hours=%d", url, hours)
+	}
+
+	resp, err := c.HTTPClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		if err := json.Unmarshal(body, &errResp); err != nil {
+			return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		}
+		return nil, fmt.Errorf("API error (%d): %s - %s", resp.StatusCode, errResp.Error, errResp.Message)
+	}
+
+	var stats DetailedStats
 	if err := json.Unmarshal(body, &stats); err != nil {
 		return nil, fmt.Errorf("unmarshal response: %w", err)
 	}

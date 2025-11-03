@@ -28,6 +28,8 @@ type ShortCodeRepository interface {
 	Delete(ctx context.Context, code string) error
 	InvalidateCache(ctx context.Context, code string) error
 	GetMetrics(ctx context.Context) (map[string]interface{}, error)
+	RecordAccessStats(ctx context.Context, stats *model.AccessStatistics) error
+	GetDetailedStats(ctx context.Context, code string, hours int) (*model.DetailedStats, error)
 }
 
 type shortCodeRepository struct {
@@ -62,7 +64,7 @@ func NewPostgresDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 	// Auto migrate
-	if err := db.AutoMigrate(&model.ShortCode{}, &model.ClickLog{}); err != nil {
+	if err := db.AutoMigrate(&model.ShortCode{}, &model.ClickLog{}, &model.AccessStatistics{}); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
@@ -247,4 +249,148 @@ func (r *shortCodeRepository) GetMetrics(ctx context.Context) (map[string]interf
 	metrics["active_codes"] = activeCodes
 
 	return metrics, nil
+}
+
+// RecordAccessStats records or updates access statistics for an hour bucket
+func (r *shortCodeRepository) RecordAccessStats(ctx context.Context, stats *model.AccessStatistics) error {
+	// Try to find existing record for this shortcode, IP, and hour bucket
+	var existing model.AccessStatistics
+	err := r.db.WithContext(ctx).
+		Where("short_code_id = ? AND ip_address = ? AND hour_bucket = ?",
+			stats.ShortCodeID, stats.IPAddress, stats.HourBucket).
+		First(&existing).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Create new record
+			stats.AccessCount = 1
+			return r.db.WithContext(ctx).Create(stats).Error
+		}
+		return err
+	}
+
+	// Update existing record
+	return r.db.WithContext(ctx).
+		Model(&existing).
+		UpdateColumn("access_count", gorm.Expr("access_count + ?", 1)).
+		Error
+}
+
+// GetDetailedStats gets detailed statistics for a shortcode
+func (r *shortCodeRepository) GetDetailedStats(ctx context.Context, code string, hours int) (*model.DetailedStats, error) {
+	// Get basic shortcode info
+	var shortCode model.ShortCode
+	err := r.db.WithContext(ctx).
+		Where("code = ?", code).
+		First(&shortCode).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("short code not found")
+		}
+		return nil, err
+	}
+
+	stats := &model.DetailedStats{
+		Code:           shortCode.Code,
+		OriginalURL:    shortCode.OriginalURL,
+		TotalClicks:    shortCode.ClickCount,
+		CreatedAt:      shortCode.CreatedAt,
+		LastAccessedAt: shortCode.LastAccessedAt,
+	}
+
+	// Calculate time range
+	var startTime time.Time
+	if hours > 0 {
+		startTime = time.Now().Add(-time.Duration(hours) * time.Hour)
+	}
+
+	// Get unique IP count
+	var uniqueIPs int64
+	query := r.db.WithContext(ctx).
+		Model(&model.AccessStatistics{}).
+		Where("short_code_id = ?", shortCode.ID)
+
+	if hours > 0 {
+		query = query.Where("hour_bucket >= ?", startTime)
+	}
+
+	err = query.Distinct("ip_address").Count(&uniqueIPs).Error
+	if err != nil {
+		return nil, err
+	}
+	stats.UniqueIPs = uniqueIPs
+
+	// Get hourly statistics
+	var hourlyStats []model.HourlyStatItem
+	hourlyQuery := r.db.WithContext(ctx).
+		Model(&model.AccessStatistics{}).
+		Select("hour_bucket, SUM(access_count) as access_count, COUNT(DISTINCT ip_address) as unique_ips").
+		Where("short_code_id = ?", shortCode.ID)
+
+	if hours > 0 {
+		hourlyQuery = hourlyQuery.Where("hour_bucket >= ?", startTime)
+	}
+
+	err = hourlyQuery.
+		Group("hour_bucket").
+		Order("hour_bucket DESC").
+		Limit(100).
+		Scan(&hourlyStats).Error
+
+	if err != nil {
+		return nil, err
+	}
+	stats.HourlyStats = hourlyStats
+
+	// Get location statistics
+	var locationStats []model.LocationStatItem
+	locationQuery := r.db.WithContext(ctx).
+		Model(&model.AccessStatistics{}).
+		Select("country, region, city, SUM(access_count) as access_count").
+		Where("short_code_id = ?", shortCode.ID)
+
+	if hours > 0 {
+		locationQuery = locationQuery.Where("hour_bucket >= ?", startTime)
+	}
+
+	err = locationQuery.
+		Group("country, region, city").
+		Order("access_count DESC").
+		Limit(50).
+		Scan(&locationStats).Error
+
+	if err != nil {
+		return nil, err
+	}
+	stats.LocationStats = locationStats
+
+	// Get recent accesses (from click logs)
+	var recentAccesses []model.RecentAccessItem
+	recentQuery := r.db.WithContext(ctx).
+		Table("click_logs").
+		Select("click_logs.ip_address, click_logs.user_agent, click_logs.created_at as access_time, "+
+			"COALESCE(access_statistics.country, '') as country, "+
+			"COALESCE(access_statistics.region, '') as region, "+
+			"COALESCE(access_statistics.city, '') as city").
+		Joins("LEFT JOIN access_statistics ON click_logs.ip_address = access_statistics.ip_address AND "+
+			"click_logs.short_code_id = access_statistics.short_code_id AND "+
+			"DATE_TRUNC('hour', click_logs.created_at) = access_statistics.hour_bucket").
+		Where("click_logs.short_code_id = ?", shortCode.ID)
+
+	if hours > 0 {
+		recentQuery = recentQuery.Where("click_logs.created_at >= ?", startTime)
+	}
+
+	err = recentQuery.
+		Order("click_logs.created_at DESC").
+		Limit(20).
+		Scan(&recentAccesses).Error
+
+	if err != nil {
+		return nil, err
+	}
+	stats.RecentAccesses = recentAccesses
+
+	return stats, nil
 }

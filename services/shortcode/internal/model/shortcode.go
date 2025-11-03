@@ -64,3 +64,68 @@ type ShortCodeStats struct {
 	CreatedAt      time.Time  `json:"created_at"`
 	LastAccessedAt *time.Time `json:"last_accessed_at,omitempty"`
 }
+
+// AccessStatistics access statistics with hourly buckets
+type AccessStatistics struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	ShortCodeID uint      `gorm:"index:idx_shortcode_hour_ip;not null" json:"short_code_id"`
+	ShortCode   ShortCode `gorm:"foreignKey:ShortCodeID" json:"-"`
+	IPAddress   string    `gorm:"size:45;index:idx_shortcode_hour_ip" json:"ip_address"`
+	Country     string    `gorm:"size:100" json:"country"`
+	Region      string    `gorm:"size:100" json:"region"`
+	City        string    `gorm:"size:100" json:"city"`
+	HourBucket  time.Time `gorm:"index:idx_shortcode_hour_ip;not null" json:"hour_bucket"` // Time truncated to hour
+	AccessCount int64     `gorm:"default:0;not null" json:"access_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// TableName specify table name
+func (AccessStatistics) TableName() string {
+	return "access_statistics"
+}
+
+// IPLocation IP location information
+type IPLocation struct {
+	Country string `json:"country"`
+	Region  string `json:"region"`
+	City    string `json:"city"`
+}
+
+// DetailedStats detailed statistics response
+type DetailedStats struct {
+	Code           string             `json:"code"`
+	OriginalURL    string             `json:"original_url"`
+	TotalClicks    int64              `json:"total_clicks"`
+	UniqueIPs      int64              `json:"unique_ips"`
+	CreatedAt      time.Time          `json:"created_at"`
+	LastAccessedAt *time.Time         `json:"last_accessed_at,omitempty"`
+	HourlyStats    []HourlyStatItem   `json:"hourly_stats"`
+	LocationStats  []LocationStatItem `json:"location_stats"`
+	RecentAccesses []RecentAccessItem `json:"recent_accesses"`
+}
+
+// HourlyStatItem hourly statistics item
+type HourlyStatItem struct {
+	HourBucket  time.Time `json:"hour_bucket"`
+	AccessCount int64     `json:"access_count"`
+	UniqueIPs   int64     `json:"unique_ips"`
+}
+
+// LocationStatItem location statistics item
+type LocationStatItem struct {
+	Country     string `json:"country"`
+	Region      string `json:"region"`
+	City        string `json:"city"`
+	AccessCount int64  `json:"access_count"`
+}
+
+// RecentAccessItem recent access item
+type RecentAccessItem struct {
+	IPAddress  string    `json:"ip_address"`
+	Country    string    `json:"country"`
+	Region     string    `json:"region"`
+	City       string    `json:"city"`
+	AccessTime time.Time `json:"access_time"`
+	UserAgent  string    `json:"user_agent"`
+}

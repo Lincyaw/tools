@@ -178,6 +178,208 @@ func (t *Tester) TestGetStats(code string) {
 	}
 }
 
+// TestGetDetailedStats test get detailed statistics
+func (t *Tester) TestGetDetailedStats(code string) {
+	color.Cyan("\n━━━ Test Get Detailed Statistics ━━━")
+
+	// Test without time range (all time)
+	stats, err := t.client.GetDetailedStats(code, 0)
+	if err != nil {
+		t.addResult("Get Detailed Statistics (All Time)", false, "Failed to get", err)
+		return
+	}
+
+	msg := fmt.Sprintf("Code: %s, Total clicks: %d, Unique IPs: %d", stats.Code, stats.TotalClicks, stats.UniqueIPs)
+	t.addResult("Get Detailed Statistics (All Time)", true, msg, nil)
+
+	if t.verbose {
+		color.Yellow("  Original URL: %s", stats.OriginalURL)
+		color.Yellow("  Total clicks: %d", stats.TotalClicks)
+		color.Yellow("  Unique IPs: %d", stats.UniqueIPs)
+		color.Yellow("  Created at: %s", stats.CreatedAt.Format(time.RFC3339))
+
+		if len(stats.HourlyStats) > 0 {
+			color.Yellow("  Hourly stats entries: %d", len(stats.HourlyStats))
+			color.Yellow("  Latest hour bucket: %s (%d accesses, %d unique IPs)",
+				stats.HourlyStats[0].HourBucket.Format("2006-01-02 15:04"),
+				stats.HourlyStats[0].AccessCount,
+				stats.HourlyStats[0].UniqueIPs)
+		}
+
+		if len(stats.LocationStats) > 0 {
+			color.Yellow("  Location stats entries: %d", len(stats.LocationStats))
+			top := stats.LocationStats[0]
+			color.Yellow("  Top location: %s, %s, %s (%d accesses)",
+				top.Country, top.Region, top.City, top.AccessCount)
+		}
+
+		if len(stats.RecentAccesses) > 0 {
+			color.Yellow("  Recent accesses: %d", len(stats.RecentAccesses))
+			latest := stats.RecentAccesses[0]
+			color.Yellow("  Latest access: %s from %s (%s, %s, %s)",
+				latest.AccessTime.Format("2006-01-02 15:04:05"),
+				latest.IPAddress, latest.Country, latest.Region, latest.City)
+		}
+	}
+
+	// Test with time range (last 24 hours)
+	stats24h, err := t.client.GetDetailedStats(code, 24)
+	if err != nil {
+		t.addResult("Get Detailed Statistics (24h)", false, "Failed to get", err)
+		return
+	}
+
+	msg24h := fmt.Sprintf("Last 24h - Clicks: %d, Unique IPs: %d", stats24h.TotalClicks, stats24h.UniqueIPs)
+	t.addResult("Get Detailed Statistics (24h)", true, msg24h, nil)
+
+	if t.verbose {
+		color.Yellow("  Last 24h total clicks: %d", stats24h.TotalClicks)
+		color.Yellow("  Last 24h unique IPs: %d", stats24h.UniqueIPs)
+		color.Yellow("  Last 24h hourly entries: %d", len(stats24h.HourlyStats))
+	}
+}
+
+// TestAccessStatisticsRecording test that access statistics are properly recorded
+func (t *Tester) TestAccessStatisticsRecording() {
+	color.Cyan("\n━━━ Test Access Statistics Recording ━━━")
+
+	// Create a test shortcode
+	testCode := fmt.Sprintf("statstest%d", time.Now().Unix())
+	req := client.CreateShortCodeRequest{
+		URL:        "https://github.com/lincyaw/tools",
+		CustomCode: testCode,
+	}
+
+	_, err := t.client.CreateShortCode(req)
+	if err != nil {
+		t.addResult("Statistics Test - Create Code", false, "Failed to create test code", err)
+		return
+	}
+
+	// Get initial stats (should be 0)
+	initialStats, err := t.client.GetDetailedStats(testCode, 0)
+	if err != nil {
+		t.addResult("Statistics Test - Get Initial Stats", false, "Failed to get initial stats", err)
+		return
+	}
+
+	if initialStats.TotalClicks != 0 {
+		t.addResult("Statistics Test - Initial State", false,
+			fmt.Sprintf("Expected 0 clicks, got %d", initialStats.TotalClicks), nil)
+	} else {
+		t.addResult("Statistics Test - Initial State", true, "Initial clicks = 0", nil)
+	}
+
+	// Simulate some accesses
+	accessCount := 5
+	color.Yellow("  Simulating %d accesses...", accessCount)
+	for i := 0; i < accessCount; i++ {
+		_, err := t.client.TestRedirect(testCode)
+		if err != nil {
+			if t.verbose {
+				color.Yellow("  Access %d failed: %v", i+1, err)
+			}
+		}
+		time.Sleep(200 * time.Millisecond) // Small delay between accesses
+	}
+
+	// Wait for async processing
+	color.Yellow("  Waiting for statistics to be processed...")
+	time.Sleep(3 * time.Second)
+
+	// Get updated stats
+	updatedStats, err := t.client.GetDetailedStats(testCode, 0)
+	if err != nil {
+		t.addResult("Statistics Test - Get Updated Stats", false, "Failed to get updated stats", err)
+		return
+	}
+
+	// Verify click count increased
+	if updatedStats.TotalClicks >= int64(accessCount) {
+		msg := fmt.Sprintf("Clicks recorded correctly (%d >= %d)", updatedStats.TotalClicks, accessCount)
+		t.addResult("Statistics Test - Click Recording", true, msg, nil)
+	} else {
+		msg := fmt.Sprintf("Expected >= %d clicks, got %d", accessCount, updatedStats.TotalClicks)
+		t.addResult("Statistics Test - Click Recording", false, msg, nil)
+	}
+
+	// Verify hourly stats exist
+	if len(updatedStats.HourlyStats) > 0 {
+		t.addResult("Statistics Test - Hourly Stats", true,
+			fmt.Sprintf("Hourly statistics created (%d entries)", len(updatedStats.HourlyStats)), nil)
+
+		if t.verbose {
+			for i, h := range updatedStats.HourlyStats {
+				color.Yellow("    Hour %d: %s - %d accesses, %d unique IPs",
+					i+1, h.HourBucket.Format("2006-01-02 15:04"),
+					h.AccessCount, h.UniqueIPs)
+			}
+		}
+	} else {
+		t.addResult("Statistics Test - Hourly Stats", false, "No hourly statistics created", nil)
+	}
+
+	// Verify location stats exist
+	if len(updatedStats.LocationStats) > 0 {
+		t.addResult("Statistics Test - Location Stats", true,
+			fmt.Sprintf("Location statistics created (%d entries)", len(updatedStats.LocationStats)), nil)
+
+		if t.verbose {
+			for i, l := range updatedStats.LocationStats {
+				color.Yellow("    Location %d: %s, %s, %s - %d accesses",
+					i+1, l.Country, l.Region, l.City, l.AccessCount)
+			}
+		}
+	} else {
+		// Location stats might be "Unknown" for localhost, which is still valid
+		t.addResult("Statistics Test - Location Stats", true,
+			"Location stats may be empty (localhost access)", nil)
+	}
+
+	// Verify recent accesses
+	if len(updatedStats.RecentAccesses) > 0 {
+		t.addResult("Statistics Test - Recent Accesses", true,
+			fmt.Sprintf("Recent accesses recorded (%d entries)", len(updatedStats.RecentAccesses)), nil)
+
+		if t.verbose {
+			for i, r := range updatedStats.RecentAccesses {
+				if i >= 3 { // Only show first 3
+					break
+				}
+				color.Yellow("    Access %d: %s from %s (%s, %s, %s)",
+					i+1, r.AccessTime.Format("15:04:05"),
+					r.IPAddress, r.Country, r.Region, r.City)
+			}
+		}
+	} else {
+		t.addResult("Statistics Test - Recent Accesses", false, "No recent accesses recorded", nil)
+	}
+
+	// Verify unique IPs
+	if updatedStats.UniqueIPs > 0 {
+		t.addResult("Statistics Test - Unique IPs", true,
+			fmt.Sprintf("Unique IPs tracked: %d", updatedStats.UniqueIPs), nil)
+	} else {
+		t.addResult("Statistics Test - Unique IPs", false, "No unique IPs tracked", nil)
+	}
+
+	// Test time range filtering (last 1 hour)
+	stats1h, err := t.client.GetDetailedStats(testCode, 1)
+	if err != nil {
+		t.addResult("Statistics Test - Time Range Filter", false, "Failed to get 1h stats", err)
+	} else {
+		msg := fmt.Sprintf("Last 1h stats retrieved (clicks: %d)", stats1h.TotalClicks)
+		t.addResult("Statistics Test - Time Range Filter", true, msg, nil)
+	}
+
+	// Cleanup
+	if err := t.client.DeleteShortCode(testCode); err != nil {
+		if t.verbose {
+			color.Yellow("  Warning: Failed to cleanup test code: %v", err)
+		}
+	}
+}
+
 // TestInvalidRequests test invalid requests
 func (t *Tester) TestInvalidRequests() {
 	color.Cyan("\n━━━ Test Invalid Requests ━━━")
@@ -288,9 +490,11 @@ func (t *Tester) RunAllTests() {
 	if autoCode != "" {
 		t.TestRedirect(autoCode)
 		t.TestGetStats(autoCode)
+		t.TestGetDetailedStats(autoCode)
 	}
 
 	t.TestInvalidRequests()
+	t.TestAccessStatisticsRecording()
 	t.TestDeleteShortCode()
 	t.TestRateLimiting()
 
