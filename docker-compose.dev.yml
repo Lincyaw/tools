@@ -1,6 +1,8 @@
 services:
   gateway:
-    image: lincyaw/tools-gateway:latest
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
     container_name: tools-gateway
     ports:
       - "80:80"
@@ -58,7 +60,9 @@ services:
 
   # Short Code Service
   shortcode:
-    image: lincyaw/tools-shortcode:latest
+    build:
+      context: ./services/shortcode
+      dockerfile: Dockerfile
     container_name: tools-shortcode
     ports:
       - "8080:8080"

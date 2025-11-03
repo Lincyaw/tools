@@ -66,9 +66,9 @@ all: fmt-check vet lint test ## Run all quality checks (simulates CI)
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Docker targets
-.PHONY: docker-up docker-down docker-logs
+.PHONY: docker-up docker-down docker-logs docker-build docker-push docker-dev-up docker-dev-down
 
-docker-up: ## Start all services with docker-compose
+docker-up: ## Start all services with docker-compose (using DockerHub images)
 	docker-compose up -d
 
 docker-down: ## Stop all services
@@ -76,3 +76,15 @@ docker-down: ## Stop all services
 
 docker-logs: ## View logs from all services
 	docker-compose logs -f
+
+docker-build: ## Build Docker images locally
+	@./scripts/build-images.sh $(DOCKER_USERNAME)
+
+docker-push: ## Build and push Docker images to DockerHub
+	@./scripts/build-and-push.sh $(DOCKER_USERNAME)
+
+docker-dev-up: ## Start all services with docker-compose (building locally)
+	docker-compose -f docker-compose.dev.yml up -d
+
+docker-dev-down: ## Stop all development services
+	docker-compose -f docker-compose.dev.yml down
