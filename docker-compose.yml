@@ -76,7 +76,7 @@ services:
       - DB_NAME=tools
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - BASE_URL=http://localhost
+      - BASE_URL=https://aoyangfang.top
     depends_on:
       postgres:
         condition: service_healthy
