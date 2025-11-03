@@ -1,4 +1,4 @@
-FROM caddy:2.10.2
+FROM caddy:2.10.2-alpine
 
 # Copy Caddy configuration
 COPY Caddyfile /etc/caddy/Caddyfile

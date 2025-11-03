@@ -5,14 +5,23 @@ This directory contains scripts for building and pushing Docker images to Docker
 ## Prerequisites
 
 - Docker installed and running
+- Docker buildx support (included in Docker Desktop)
 - Docker Hub account
 - Logged in to Docker Hub: `docker login`
+
+## Multi-Architecture Support
+
+All scripts build images for multiple architectures by default:
+- `linux/amd64` (x86_64)
+- `linux/arm64` (ARM64/Apple Silicon)
+
+This ensures the images work on both traditional servers and ARM-based systems.
 
 ## Scripts
 
 ### build-images.sh
 
-Builds all Docker images locally without pushing to DockerHub.
+Builds all Docker images locally for multiple architectures.
 
 **Usage:**
 ```bash
@@ -24,11 +33,14 @@ Builds all Docker images locally without pushing to DockerHub.
 
 # Build with custom version
 VERSION=v1.0.0 ./scripts/build-images.sh
+
+# Build for specific platforms
+PLATFORMS=linux/amd64 ./scripts/build-images.sh
 ```
 
 ### build-and-push.sh
 
-Builds all Docker images and pushes them to DockerHub.
+Builds all Docker images for multiple architectures and pushes them to DockerHub.
 
 **Usage:**
 ```bash
@@ -40,6 +52,9 @@ Builds all Docker images and pushes them to DockerHub.
 
 # Build and push with custom version
 VERSION=v1.0.0 ./scripts/build-and-push.sh
+
+# Build and push for specific platforms
+PLATFORMS=linux/amd64,linux/arm64 ./scripts/build-and-push.sh
 ```
 
 ## Makefile Commands

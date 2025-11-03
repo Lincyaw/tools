@@ -14,7 +14,9 @@ RUN go mod download
 COPY . .
 
 # Build application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# Use TARGETARCH to build for the correct platform
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o shortcode ./cmd/server/main.go
