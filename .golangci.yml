@@ -1,0 +1,36 @@
+run:
+  timeout: 5m
+  go: '1.24'
+
+linters:
+  enable:
+    # Enabled by default
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Vet examines Go source code
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Staticcheck is go vet on steroids
+    - unused        # Check for unused constants, variables, functions and types
+
+    # Additional recommended linters
+    - gofmt         # Check whether code was gofmt-ed
+    - goimports     # Check import statements are formatted
+    - misspell      # Finds commonly misspelled English words
+    - revive        # Fast, configurable linter for Go
+    - gosec         # Inspects source code for security problems
+    - unconvert     # Remove unnecessary type conversions
+    - goconst       # Finds repeated strings
+    - gocyclo       # Computes cyclomatic complexity
+    - bodyclose     # Checks whether HTTP response body is closed
+    - stylecheck    # Replacement for golint
+    - errorlint     # Error wrapping checks
+    - gocritic      # Provides diagnostics for bugs and performance
+    - whitespace    # Detection of leading and trailing whitespace
+
+issues:
+  exclude-rules:
+    - linters:
+        - gocritic
+      text: "exitAfterDefer"
+  max-same-issues: 0
+  max-issues-per-linter: 0
