@@ -4,66 +4,10 @@ FROM caddy:2.10.2
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Create necessary directories
-RUN mkdir -p /var/log/caddy /usr/share/caddy
+RUN mkdir -p /var/log/caddy
 
-# Create simple welcome page
-RUN echo '<!DOCTYPE html> \
-<html lang="zh-CN"> \
-<head> \
-    <meta charset="UTF-8"> \
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> \
-    <title>Aoyangfang's Toolset</title> \
-    <style> \
-        body { \
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; \
-            max-width: 800px; \
-            margin: 50px auto; \
-            padding: 20px; \
-            line-height: 1.6; \
-        } \
-        h1 { color: #333; } \
-        .service { \
-            background: #f5f5f5; \
-            padding: 15px; \
-            margin: 10px 0; \
-            border-radius: 5px; \
-        } \
-        .service h3 { margin-top: 0; color: #0066cc; } \
-        code { \
-            background: #e0e0e0; \
-            padding: 2px 6px; \
-            border-radius: 3px; \
-            font-size: 0.9em; \
-        } \
-        a { color: #0066cc; text-decoration: none; } \
-        a:hover { text-decoration: underline; } \
-    </style> \
-</head> \
-<body> \
-    <h1>🛠️ Aoyangfang's Toolset</h1> \
-    <p>Welcome to my online tool service platform!</p> \
-    \
-    <div class="service"> \
-        <h3>🔗 Short Link Service</h3> \
-        <p>Convert long URLs to short links for easy sharing and management.</p> \
-        <ul> \
-            <li>Create short link: <code>POST /api/v1/shorten</code></li> \
-            <li>Access short link: <code>GET /:code</code></li> \
-            <li>View statistics: <code>GET /api/v1/stats/:code</code></li> \
-        </ul> \
-        <p><a href="/api/v1/stats/example">View example statistics</a></p> \
-    </div> \
-    \
-    <div class="service"> \
-        <h3>📊 Service Status</h3> \
-        <p><a href="/health">Health check</a></p> \
-    </div> \
-    \
-    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; text-align: center;"> \
-        <p>&copy; 2025 aoyangfang.top - All rights reserved</p> \
-    </footer> \
-</body> \
-</html>' > /usr/share/caddy/index.html
+# Copy HTML files
+COPY html /usr/share/caddy
 
 EXPOSE 80 443
 
