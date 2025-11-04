@@ -4,7 +4,6 @@ services:
     container_name: tools-gateway
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./services/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./services/gateway/html:/usr/share/caddy:ro
@@ -72,7 +71,7 @@ services:
       - DB_NAME=tools
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - BASE_URL=https://aoyangfang.top
+      - BASE_URL=http://aoyangfang.top
     depends_on:
       postgres:
         condition: service_healthy

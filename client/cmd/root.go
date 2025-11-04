@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	baseURL string
-	verbose bool
+	baseURL            string
+	verbose            bool
+	insecureSkipVerify bool
 )
 
 var rootCmd = &cobra.Command{
@@ -35,4 +36,5 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&baseURL, "url", "u", "http://localhost", "Service base URL")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate verification (use only for testing)")
 }

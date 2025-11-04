@@ -15,7 +15,12 @@ var redirectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
 		code := args[0]
-		c := client.NewClient(baseURL)
+		var c *client.Client
+		if insecureSkipVerify {
+			c = client.NewClientWithInsecureSkipVerify(baseURL)
+		} else {
+			c = client.NewClient(baseURL)
+		}
 
 		color.Cyan("Testing redirect for short code '%s'...", code)
 

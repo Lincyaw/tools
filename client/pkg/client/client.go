@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,25 @@ func NewClient(baseURL string) *Client {
 			Timeout: 10 * time.Second,
 			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 				// Do not automatically follow redirects to test redirect functionality
+				return http.ErrUseLastResponse
+			},
+		},
+	}
+}
+
+// NewClientWithInsecureSkipVerify creates a client that skips TLS certificate verification
+// WARNING: Only use this for testing with self-signed certificates, never in production!
+func NewClientWithInsecureSkipVerify(baseURL string) *Client {
+	return &Client{
+		BaseURL: baseURL,
+		HTTPClient: &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 		},

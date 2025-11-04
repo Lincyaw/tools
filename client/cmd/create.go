@@ -20,7 +20,15 @@ var createCmd = &cobra.Command{
 	Short: "Create short link",
 	Long:  `Create a new short link, can automatically generate short code or use custom short code.`,
 	Run: func(_ *cobra.Command, _ []string) {
-		c := client.NewClient(baseURL)
+		var c *client.Client
+		if insecureSkipVerify {
+			c = client.NewClientWithInsecureSkipVerify(baseURL)
+			if verbose {
+				color.Yellow("⚠ Warning: Skipping TLS certificate verification")
+			}
+		} else {
+			c = client.NewClient(baseURL)
+		}
 
 		req := client.CreateShortCodeRequest{
 			URL:        url,

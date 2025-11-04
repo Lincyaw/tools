@@ -32,6 +32,15 @@ func NewTester(baseURL string, verbose bool) *Tester {
 	}
 }
 
+// NewTesterWithInsecureSkipVerify creates a tester that skips TLS certificate verification
+func NewTesterWithInsecureSkipVerify(baseURL string, verbose bool) *Tester {
+	return &Tester{
+		client:  client.NewClientWithInsecureSkipVerify(baseURL),
+		results: make([]Result, 0),
+		verbose: verbose,
+	}
+}
+
 // addResult add test result
 func (t *Tester) addResult(name string, passed bool, message string, err error) {
 	t.results = append(t.results, Result{

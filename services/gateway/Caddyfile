@@ -1,21 +1,11 @@
-{
-    # Use local_certs for development to avoid Let's Encrypt rate limits
-    # This will generate self-signed certificates
-    local_certs
-
-    # Email for Let's Encrypt notifications (used in production)
-    email aoyangfang@gmail.com
-}
-
-# Main site configuration
-# Support both HTTP and HTTPS without forcing redirect
-http://aoyangfang.top, http://www.aoyangfang.top, https://aoyangfang.top, https://www.aoyangfang.top {
+# HTTP only configuration - no TLS/certificates
+http://aoyangfang.top, http://www.aoyangfang.top {
     log {
         output file /var/log/caddy/access.log
         format json
     }
 
-    # Security headers (removed HSTS to allow HTTP)
+    # Security headers
     header {
         # Prevent clickjacking
         X-Frame-Options "SAMEORIGIN"
@@ -33,9 +23,7 @@ http://aoyangfang.top, http://www.aoyangfang.top, https://aoyangfang.top, https:
         reverse_proxy shortcode:8080 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto http
 
             # Timeout settings
             transport http {
@@ -50,9 +38,7 @@ http://aoyangfang.top, http://www.aoyangfang.top, https://aoyangfang.top, https:
         reverse_proxy shortcode:8080 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto http
         }
     }
 
@@ -98,38 +84,7 @@ http://aoyangfang.top, http://www.aoyangfang.top, https://aoyangfang.top, https:
         reverse_proxy shortcode:8080 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Proto http
         }
-    }
-}
-
-# 本地开发环境配置（HTTP only）
-:80 {
-    log {
-        output stdout
-    }
-
-    # API 路由
-    handle /api/v1/shorten* {
-        reverse_proxy shortcode:8080
-    }
-
-    handle /api/v1/stats* {
-        reverse_proxy shortcode:8080
-    }
-
-    # 健康检查和指标端点
-    handle /health {
-        reverse_proxy shortcode:8080
-    }
-
-    handle /metrics {
-        reverse_proxy shortcode:8080
-    }
-
-    # 短链接重定向（作为默认处理器，处理所有其他请求）
-    handle {
-        reverse_proxy shortcode:8080
     }
 }
