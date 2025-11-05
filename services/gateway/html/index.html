@@ -1,57 +1,200 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aoyangfang's Toolset</title>
+    <title>Personal Profile and Tech Sharing</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 50px auto;
             padding: 20px;
-            line-height: 1.6;
+            line-height: 1.8;
+            color: #333;
         }
-        h1 { color: #333; }
-        .service {
-            background: #f5f5f5;
-            padding: 15px;
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #0066cc;
+            margin-top: 25px;
+        }
+        .intro {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .intro p {
+            font-size: 1.1em;
             margin: 10px 0;
-            border-radius: 5px;
         }
-        .service h3 { margin-top: 0; color: #0066cc; }
+        .section {
+            background: #f8f9fa;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tech-tag {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+        .project {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .project h4 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
         code {
-            background: #e0e0e0;
-            padding: 2px 6px;
-            border-radius: 3px;
+            background: #e8f4f8;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+            border-bottom: 1px dotted #3498db;
+        }
+        a:hover {
+            color: #2980b9;
+            border-bottom: 1px solid #2980b9;
+        }
+        .contact {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .contact a {
+            margin: 0 15px;
+            font-size: 1.1em;
+        }
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+            color: #7f8c8d;
+            text-align: center;
             font-size: 0.9em;
         }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        footer a {
+            color: #7f8c8d;
+            border: none;
+        }
+        footer a:hover {
+            color: #34495e;
+        }
     </style>
 </head>
 <body>
-    <h1>🛠️ Aoyangfang's Toolset</h1>
-    <p>Welcome to my online tool service platform!</p>
+    <h1>👨‍💻 Personal Profile and Tech Sharing</h1>
 
-    <div class="service">
-        <h3>🔗 Short Link Service</h3>
-        <p>Convert long URLs to short links for easy sharing and management.</p>
+    <div class="intro">
+        <p>🌟 Welcome to My Tech Space</p>
+        <p>Passionate about technology, focused on backend development and system architecture</p>
+    </div>
+
+    <div class="section">
+        <h2>📋 About Me</h2>
+        <p>I am a passionate developer focused on building high-quality, scalable application systems. I enjoy exploring new technologies, sharing practical experiences, and believe that technology can make the world a better place.</p>
+        <p>My main technical areas include backend development, microservices architecture, and cloud-native technologies. I have accumulated rich experience in real projects, with a focus on code quality and system design.</p>
+    </div>
+
+    <div class="section">
+        <h2>💻 Tech Stack</h2>
+        <h3>Programming Languages</h3>
+        <div class="tech-stack">
+            <span class="tech-tag">Go</span>
+            <span class="tech-tag">Python</span>
+            <span class="tech-tag">JavaScript</span>
+            <span class="tech-tag">TypeScript</span>
+        </div>
+
+        <h3>Backend Technologies</h3>
+        <div class="tech-stack">
+            <span class="tech-tag">Gin</span>
+            <span class="tech-tag">gRPC</span>
+            <span class="tech-tag">Redis</span>
+            <span class="tech-tag">PostgreSQL</span>
+            <span class="tech-tag">MySQL</span>
+            <span class="tech-tag">MongoDB</span>
+        </div>
+
+        <h3>DevOps & Tools</h3>
+        <div class="tech-stack">
+            <span class="tech-tag">Docker</span>
+            <span class="tech-tag">Kubernetes</span>
+            <span class="tech-tag">Git</span>
+            <span class="tech-tag">CI/CD</span>
+            <span class="tech-tag">Linux</span>
+        </div>
+    </div>
+
+        <div class="section">
+        <h2>🚀 Projects</h2>
+
+        <div class="project">
+            <h4>🔗 URL Shortener Service</h4>
+            <p>High-performance URL shortener service built with Go, supporting custom short codes, access statistics, and expiration management.</p>
+            <p><strong>Tech Stack:</strong> Go + Redis + PostgreSQL + Caddy</p>
+            <ul>
+                <li>API Endpoint: <code>POST /api/v1/shorten</code> - Create short URL</li>
+                <li>Redirect: <code>GET /:code</code> - Access short URL</li>
+                <li>Statistics: <code>GET /api/v1/stats/:code</code> - View access statistics</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📝 Tech Sharing</h2>
+        <p>Regularly sharing technical articles, practical experiences, and learning insights. Main topics include:</p>
         <ul>
-            <li>Create short link: <code>POST /api/v1/shorten</code></li>
-            <li>Access short link: <code>GET /:code</code></li>
-            <li>View statistics: <code>GET /api/v1/stats/:code</code></li>
+            <li>Go language development best practices</li>
+            <li>Microservices architecture design and implementation</li>
+            <li>System performance optimization techniques</li>
+            <li>Cloud-native technology applications</li>
+            <li>Development tools and productivity enhancement</li>
         </ul>
-        <p><a href="/api/v1/stats/example">View example statistics</a></p>
     </div>
 
-    <div class="service">
-        <h3>📊 Service Status</h3>
-        <p><a href="/health">Health check</a></p>
+    <div class="contact">
+        <h2>📬 Contact</h2>
+        <p>
+            <a href="mailto:contact@aoyangfang.top">📧 Email</a>
+            <a href="https://github.com/Lincyaw" target="_blank">🐙 GitHub</a>
+        </p>
     </div>
 
-    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; text-align: center;">
+    <footer>
         <p>&copy; 2025 aoyangfang.top - All rights reserved</p>
+        <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2025207590号</a></p>
     </footer>
 </body>
 </html>
